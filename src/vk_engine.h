@@ -49,6 +49,10 @@ public:
 	VkRenderPass _renderPass;
 	std::vector<VkFramebuffer> _framebuffers;
 
+	// pipelines
+	VkPipelineLayout _trianglePipelineLayout;
+	VkPipeline _trianglePipeline;
+
 	struct SDL_Window* _window{ nullptr };
 
 	static VulkanEngine& Get();
@@ -78,4 +82,9 @@ private:
 	void init_framebuffers();
 
 	void update_rendersize();
+
+	bool load_shader_module(const char* filepath, VkShaderModule* outShaderModule);
+	void init_pipelines();
+
+	void on_window_resize(int width, int height);
 };
