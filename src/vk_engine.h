@@ -52,6 +52,7 @@ public:
 	// pipelines
 	VkPipelineLayout _trianglePipelineLayout;
 	VkPipeline _trianglePipeline;
+	VkPipeline _coloredTrianglePipeline;
 
 	struct SDL_Window* _window{ nullptr };
 
@@ -70,6 +71,9 @@ public:
 	void run();
 
 private:
+
+	int _selectShader {0};
+
 	void init_vulkan();
 	void init_swapchain();
 	void init_commands();
