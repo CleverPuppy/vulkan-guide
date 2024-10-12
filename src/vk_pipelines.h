@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include <vk_types.h>
+#include <vulkan/vulkan_core.h>
 
 namespace vkutil {
 
@@ -14,6 +15,7 @@ public:
 	VkPipelineColorBlendAttachmentState _colorBlendAttachment;
 	VkPipelineMultisampleStateCreateInfo _multisampling;
 	VkPipelineLayout _pipelineLayout;
+	VkPipelineDepthStencilStateCreateInfo _depthstencil;
 
 	VkPipeline build_pipeline(VkDevice device, VkRenderPass pass);
 };

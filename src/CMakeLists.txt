@@ -17,13 +17,15 @@ add_executable (engine
   vk_loader.cpp
   camera.cpp
   camera.h
+  mesh.h
+  mesh.cpp
 )
 
 set_property(TARGET engine PROPERTY CXX_STANDARD 20)
 target_compile_definitions(engine PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)
 target_include_directories(engine PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
-target_link_libraries(engine PUBLIC vma glm Vulkan::Vulkan fmt::fmt stb_image SDL2::SDL2 vkbootstrap imgui fastgltf::fastgltf)
+target_link_libraries(engine PUBLIC vma glm Vulkan::Vulkan fmt::fmt stb_image SDL2::SDL2 vkbootstrap imgui fastgltf::fastgltf tinyobjloader)
 
 target_precompile_headers(engine PUBLIC <optional> <vector> <memory> <string> <vector> <unordered_map> <glm/mat4x4.hpp>  <glm/vec4.hpp> <vulkan/vulkan.h>)
 

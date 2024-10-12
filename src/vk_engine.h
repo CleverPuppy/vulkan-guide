@@ -4,9 +4,15 @@
 #pragma once
 
 #include <_types/_uint32_t.h>
+#include <deque>
+#include <functional>
+#include <utility>
 #include <vector>
-#include <vk_types.h>
+#include "vk_types.h"
 #include <vulkan/vulkan_core.h>
+
+#include "mesh.h"
+#include "glm/glm.hpp"
 
 struct FrameData {
 	VkCommandPool _commandPool;
@@ -15,6 +21,32 @@ struct FrameData {
 	VkFence _renderFence;
 };
 constexpr unsigned int FRAME_OVERLAP = 2;
+
+class DeleteQueue {
+public:
+	template<typename T>
+	void push_function(T&& function)
+	{
+		_deletors.emplace_back(std::forward<T>(function));
+	}
+
+	void flush()
+	{
+		for (auto it = _deletors.rbegin(); it != _deletors.rend(); ++it)
+		{
+			(*it)();
+		}
+
+		_deletors.clear();
+	}
+private:
+	std::deque<std::function<void()>> _deletors;
+};
+
+struct MeshPushConstants {
+	glm::vec4 data;
+	glm::mat4 render_matrix;
+};
 
 class VulkanEngine {
 public:
@@ -54,6 +86,23 @@ public:
 	VkPipeline _trianglePipeline;
 	VkPipeline _coloredTrianglePipeline;
 
+	// vma allocator
+	VmaAllocator _allocator;
+
+	// mesh related
+	VkPipelineLayout _meshPipelineLayout;
+	VkPipeline _meshPipeline;
+	Mesh _triangleMesh;
+	Mesh _monkeyMesh;
+
+	// depth image
+	VkFormat _depthImageFormat;
+	VkImageView _depthImageView;
+	AllocatedImage _depthImage;
+
+	// resource delete queue
+	DeleteQueue _mainDeleteQueue;
+
 	struct SDL_Window* _window{ nullptr };
 
 	static VulkanEngine& Get();
@@ -78,6 +127,7 @@ private:
 	void init_swapchain();
 	void init_commands();
 	void init_sync_structures();
+	void init_depth_image();
 
 	void create_swapchain(uint32_t width, uint32_t height);
 	void destroy_swapchain();
@@ -91,4 +141,7 @@ private:
 	void init_pipelines();
 
 	void on_window_resize(int width, int height);
+
+	void load_meshs();
+	void upload_mesh(Mesh& mesh);
 };
