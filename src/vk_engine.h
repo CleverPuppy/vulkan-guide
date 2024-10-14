@@ -6,6 +6,7 @@
 #include <_types/_uint32_t.h>
 #include <deque>
 #include <functional>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 #include "vk_types.h"
@@ -46,6 +47,17 @@ private:
 struct MeshPushConstants {
 	glm::vec4 data;
 	glm::mat4 render_matrix;
+};
+
+struct Material {
+	VkPipeline pipeline;
+	VkPipelineLayout pipelineLayout;
+};
+
+struct RenderObject {
+	Mesh* mesh;
+	Material* material;
+	glm::mat4 transformMatrix;
 };
 
 class VulkanEngine {
@@ -103,6 +115,11 @@ public:
 	// resource delete queue
 	DeleteQueue _mainDeleteQueue;
 
+	// render objects
+	std::vector<RenderObject> _renderables;
+	std::unordered_map<std::string, Material> _materials;
+	std::unordered_map<std::string, Mesh> _meshes;
+
 	struct SDL_Window* _window{ nullptr };
 
 	static VulkanEngine& Get();
@@ -144,4 +161,19 @@ private:
 
 	void load_meshs();
 	void upload_mesh(Mesh& mesh);
+
+	void init_scene();
+
+	//create material and add it to the map
+	Material* create_material(VkPipeline pipeline, VkPipelineLayout layout,const std::string& name);
+
+	//returns nullptr if it can't be found
+	Material* get_material(const std::string& name);
+
+	//returns nullptr if it can't be found
+	Mesh *get_mesh(const std::string& name);
+
+	//our draw function
+	void draw_objects(VkCommandBuffer cmd,RenderObject* first, int count);
+
 };
