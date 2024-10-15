@@ -98,6 +98,8 @@ void VulkanEngine::cleanup()
         // make sure the gpu has stopped doint its things
         vkDeviceWaitIdle(_device);
 
+        destroy_depth_image(); // before the _mainDeleteQueue.flush(), since this is allocated by vma
+        destroy_framebuffers();
         _mainDeleteQueue.flush();
 
         for (int i = 0; i < FRAME_OVERLAP; ++i)
@@ -116,9 +118,6 @@ void VulkanEngine::cleanup()
         // cleanup render pass and frame buffers
 		//destroy the main renderpass
 		vkDestroyRenderPass(_device, _renderPass, nullptr);
-		for (int i = 0; i < _framebuffers.size(); i++) {
-			vkDestroyFramebuffer(_device, _framebuffers[i], nullptr);
-		}
 
         vkDestroySurfaceKHR(_instance, _surface, nullptr);
         vkDestroyDevice(_device, nullptr);
@@ -141,7 +140,16 @@ void VulkanEngine::draw()
 
     // request the image from the swapchain
     uint32_t swapchainImageIdx;
-    VK_CHECK(vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIdx));
+    VkResult nextImageResult = vkAcquireNextImageKHR(_device, _swapchain, 1000000000, get_current_frame()._swapchainSemaphore, nullptr, &swapchainImageIdx);
+    if (nextImageResult != VK_SUCCESS)
+    {
+        // window resize happened.
+        if (nextImageResult == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            _resize_requested = true;
+        }
+        return;
+    }
 
     // obtain current cmd buffer and reset it to record again
     VkCommandBuffer cmd = get_current_frame()._commandBuffer;
@@ -207,7 +215,16 @@ void VulkanEngine::draw()
 
     presentInfo.pImageIndices = &swapchainImageIdx;
 
-    VK_CHECK(vkQueuePresentKHR(_graphicsQueue, &presentInfo));
+    VkResult presentResult = vkQueuePresentKHR(_graphicsQueue, &presentInfo);
+    if (presentResult != VK_SUCCESS)
+    {
+        if (presentResult == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            // window resize happend
+            _resize_requested = true;
+        }
+        return;
+    }
     ++_frameNumber;
 }
 
@@ -233,6 +250,7 @@ void VulkanEngine::run()
                 }
                 if (e.window.event == SDL_WINDOWEVENT_RESIZED) {
                     fmt::println("Window resized");
+                    _resize_requested = true;
                 }
             }
             else if (e.type == SDL_KEYDOWN) {
@@ -240,6 +258,14 @@ void VulkanEngine::run()
                     _selectShader = (_selectShader + 1) % 2;
                 }
             }
+        }
+
+        // handle window resize
+        if (_resize_requested)
+        {
+            handle_window_resize();
+
+            _resize_requested = false;
         }
 
         // do not draw if we are minimized
@@ -510,6 +536,14 @@ void VulkanEngine::init_framebuffers()
         framebuffer_info.pAttachments = imageViews.data();
         framebuffer_info.attachmentCount = imageViews.size();
         VK_CHECK(vkCreateFramebuffer(_device, &framebuffer_info, nullptr, &_framebuffers[i]));
+    }
+}
+
+void VulkanEngine::destroy_framebuffers()
+{
+    for (const auto& framebuffer : _framebuffers)
+    {
+        vkDestroyFramebuffer(_device, framebuffer, nullptr);
     }
 }
 
@@ -857,10 +891,12 @@ void VulkanEngine::init_depth_image()
         },
     };
     VK_CHECK(vkCreateImageView(_device, &imageViewInfo, nullptr, &_depthImageView));
-    _mainDeleteQueue.push_function([=](){
-        vkDestroyImageView(_device, _depthImageView, nullptr);
-        vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
-    });
+}
+
+void VulkanEngine::destroy_depth_image()
+{
+    vkDestroyImageView(_device, _depthImageView, nullptr);
+    vmaDestroyImage(_allocator, _depthImage._image, _depthImage._allocation);
 }
 
 //create material and add it to the map
@@ -960,4 +996,19 @@ void VulkanEngine::init_scene()
 			_renderables.push_back(tri);
 		}
 	}
+}
+
+void VulkanEngine::handle_window_resize()
+{
+    vkDeviceWaitIdle(_device);
+
+    destroy_depth_image();
+    destroy_framebuffers();
+    destroy_swapchain();
+
+    update_rendersize();
+
+    create_swapchain(_renderExtent.width, _renderExtent.height);
+    init_depth_image();
+    init_framebuffers();
 }

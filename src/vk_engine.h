@@ -139,20 +139,24 @@ public:
 private:
 
 	int _selectShader {0};
+	bool _resize_requested {false};
 
 	void init_vulkan();
 	void init_swapchain();
 	void init_commands();
 	void init_sync_structures();
 	void init_depth_image();
+	void destroy_depth_image();
 
 	void create_swapchain(uint32_t width, uint32_t height);
 	void destroy_swapchain();
 
 	void init_default_renderpass();
 	void init_framebuffers();
+	void destroy_framebuffers();
 
 	void update_rendersize();
+	void handle_window_resize();
 
 	bool load_shader_module(const char* filepath, VkShaderModule* outShaderModule);
 	void init_pipelines();
