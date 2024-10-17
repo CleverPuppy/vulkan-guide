@@ -6,13 +6,17 @@
 #include <_types/_uint32_t.h>
 #include <deque>
 #include <functional>
+#include <stddef.h>
+#include <sys/sysctl.h>
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "vk_mem_alloc.h"
 #include "vk_types.h"
 #include <vulkan/vulkan_core.h>
 
 #include "mesh.h"
+#include "camera.h"
 #include "glm/glm.hpp"
 
 struct FrameData {
@@ -20,8 +24,24 @@ struct FrameData {
 	VkCommandBuffer _commandBuffer;
 	VkSemaphore _swapchainSemaphore, _renderSemaphore;
 	VkFence _renderFence;
+	AllocatedBuffer _cameraBuffer;
+	AllocatedBuffer _objectBuffer;
+	VkDescriptorSet _globalDescriptor;
+	VkDescriptorSet _objectDescriptor;
 };
 constexpr unsigned int FRAME_OVERLAP = 2;
+
+struct GPUSceneData {
+	glm::vec4 fogColor;
+	glm::vec4 forDistance;
+	glm::vec4 ambientColor;
+	glm::vec4 sunlightDirection;
+	glm::vec4 sunlightColor;
+};
+
+struct GPUObjectData {
+	glm::mat4 modelMatrix;
+};
 
 class DeleteQueue {
 public:
@@ -73,6 +93,7 @@ public:
 	VkInstance _instance;
 	VkDebugUtilsMessengerEXT _debugMessager;
 	VkPhysicalDevice _chosenGPU;
+	VkPhysicalDeviceProperties _gpuProperties;
 	VkDevice _device;
 	VkSurfaceKHR _surface;
 
@@ -119,6 +140,17 @@ public:
 	std::vector<RenderObject> _renderables;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
+
+	// descriptor sets related
+	VkDescriptorPool _descriptorPool;
+	VkDescriptorSetLayout _globalSetLayout;
+	VkDescriptorSetLayout _objectSetLayout;
+	// camera related
+	Camera _camera;
+
+	// scene related data
+	GPUSceneData _sceneParameters;
+	AllocatedBuffer _sceneParameterBuffer;
 
 	struct SDL_Window* _window{ nullptr };
 
@@ -167,6 +199,9 @@ private:
 	void upload_mesh(Mesh& mesh);
 
 	void init_scene();
+	void init_camera();
+
+	void init_descriptors();
 
 	//create material and add it to the map
 	Material* create_material(VkPipeline pipeline, VkPipelineLayout layout,const std::string& name);
@@ -180,4 +215,7 @@ private:
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd,RenderObject* first, int count);
 
+	// helper functions
+	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);
+	size_t pad_uniform_buffer_size(size_t origSize);
 };
