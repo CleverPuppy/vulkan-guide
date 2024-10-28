@@ -31,6 +31,11 @@ struct FrameData {
 };
 constexpr unsigned int FRAME_OVERLAP = 2;
 
+struct Texture {
+	AllocatedImage image;
+	VkImageView imageView;
+};
+
 struct GPUSceneData {
 	glm::vec4 fogColor;
 	glm::vec4 forDistance;
@@ -41,6 +46,12 @@ struct GPUSceneData {
 
 struct GPUObjectData {
 	glm::mat4 modelMatrix;
+};
+
+struct UploadContext {
+	VkFence _uploadFence;
+	VkCommandPool _commandPool;
+	VkCommandBuffer _commandBuffer;
 };
 
 class DeleteQueue {
@@ -70,6 +81,7 @@ struct MeshPushConstants {
 };
 
 struct Material {
+	VkDescriptorSet textureSet{VK_NULL_HANDLE};
 	VkPipeline pipeline;
 	VkPipelineLayout pipelineLayout;
 };
@@ -81,6 +93,7 @@ struct RenderObject {
 };
 
 class VulkanEngine {
+	friend bool load_image_from_file(VulkanEngine& engine, const char* file, AllocatedImage& outImage);
 public:
 
 	bool _isInitialized{ false };
@@ -114,19 +127,12 @@ public:
 	VkRenderPass _renderPass;
 	std::vector<VkFramebuffer> _framebuffers;
 
-	// pipelines
-	VkPipelineLayout _trianglePipelineLayout;
-	VkPipeline _trianglePipeline;
-	VkPipeline _coloredTrianglePipeline;
-
 	// vma allocator
 	VmaAllocator _allocator;
 
 	// mesh related
 	VkPipelineLayout _meshPipelineLayout;
 	VkPipeline _meshPipeline;
-	Mesh _triangleMesh;
-	Mesh _monkeyMesh;
 
 	// depth image
 	VkFormat _depthImageFormat;
@@ -140,17 +146,22 @@ public:
 	std::vector<RenderObject> _renderables;
 	std::unordered_map<std::string, Material> _materials;
 	std::unordered_map<std::string, Mesh> _meshes;
+	std::unordered_map<std::string, Texture> _loadedTextures;
 
 	// descriptor sets related
 	VkDescriptorPool _descriptorPool;
 	VkDescriptorSetLayout _globalSetLayout;
 	VkDescriptorSetLayout _objectSetLayout;
+	VkDescriptorSetLayout _singleTextureSetLayout;
 	// camera related
 	Camera _camera;
 
 	// scene related data
 	GPUSceneData _sceneParameters;
 	AllocatedBuffer _sceneParameterBuffer;
+
+	// memory transfer related
+	UploadContext _uploadContext;
 
 	struct SDL_Window* _window{ nullptr };
 
@@ -198,6 +209,8 @@ private:
 	void load_meshs();
 	void upload_mesh(Mesh& mesh);
 
+	void load_images();
+
 	void init_scene();
 	void init_camera();
 
@@ -214,6 +227,11 @@ private:
 
 	//our draw function
 	void draw_objects(VkCommandBuffer cmd,RenderObject* first, int count);
+
+	// transfer related functions
+	void init_upload_context();
+	void destroy_upload_context();
+	void immediate_submit(std::function<void(VkCommandBuffer cmd)>&& function);
 
 	// helper functions
 	AllocatedBuffer create_buffer(size_t allocSize, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage);

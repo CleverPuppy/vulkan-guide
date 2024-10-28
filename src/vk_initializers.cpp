@@ -1,4 +1,5 @@
 ﻿#include <vk_initializers.h>
+#include <vulkan/vulkan_core.h>
 
 //> init_cmd
 VkCommandPoolCreateInfo vkinit::command_pool_create_info(uint32_t queueFamilyIndex,
@@ -334,4 +335,16 @@ VkPipelineShaderStageCreateInfo vkinit::pipeline_shader_stage_create_info(VkShad
     // the entry point of the shader
     info.pName = entry;
     return info;
+}
+
+VkSamplerCreateInfo vkinit::sampler_create_info(VkFilter filters, VkSamplerAddressMode samplerAddressMode)
+{
+	return VkSamplerCreateInfo{
+        .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
+        .magFilter = filters,
+        .minFilter = filters,
+        .addressModeU = samplerAddressMode,
+        .addressModeV = samplerAddressMode,
+        .addressModeW = samplerAddressMode,
+    };
 }
