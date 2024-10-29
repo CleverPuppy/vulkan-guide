@@ -266,8 +266,22 @@ void VulkanEngine::run()
                 }
             }
             else if (e.type == SDL_KEYDOWN) {
-                if (e.key.keysym.sym == SDLK_SPACE) {
-                    _selectShader = (_selectShader + 1) % 2;
+                switch (e.key.keysym.sym)
+                {
+                    case SDLK_w:
+                        _camera.move_position(Camera::UP);
+                        break;
+                    case SDLK_s:
+                        _camera.move_position(Camera::DOWN);
+                        break;
+                    case SDLK_a:
+                        _camera.move_position(Camera::LEFT);
+                        break;
+                    case SDLK_d:
+                        _camera.move_position(Camera::RIGHT);
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -948,7 +962,6 @@ void VulkanEngine::draw_objects(VkCommandBuffer cmd,RenderObject* first, int cou
 
     // update camera data
     GPUCameraData cameraData = _camera.GetGPUData();
-    cameraData.proj[1][1] *= -1;
     cameraData.projview = cameraData.proj * cameraData.view;
     void* data;
     vmaMapMemory(_allocator, get_current_frame()._cameraBuffer._allocation, &data);
@@ -1230,8 +1243,8 @@ void VulkanEngine::init_camera(void)
     /* setting up cameras */
     glm::vec3 cameraPos = {6.0f, 6.0f, -6.0f};
     glm::vec3 up {0.0, 1.0, 0.0};
-    glm::vec3 center {0.0, 0.0, 0.0};
-    _camera = Camera(cameraPos, up, center);
+    glm::vec3 direction {0.0, 0.0, 1.0};
+    _camera = Camera(cameraPos, up, direction);
 }
 
 size_t VulkanEngine::pad_uniform_buffer_size(size_t origSize)

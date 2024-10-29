@@ -181,7 +181,6 @@ public:
 
 private:
 
-	int _selectShader {0};
 	bool _resize_requested {false};
 
 	void init_vulkan();
